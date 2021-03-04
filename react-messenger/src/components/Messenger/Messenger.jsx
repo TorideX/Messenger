@@ -1,61 +1,23 @@
 import React, { useEffect, useState } from 'react'
 import {HubConnectionBuilder} from '@microsoft/signalr'
 import { useDispatch, useSelector } from 'react-redux';
-import { addChatAction, connectAction, loadChatsAction, loadSelectedPartnerAction, loadUserAction } from '../../actions';
+import { addChatAction, connectAction, loadChatsAction, loadChatsActionName, loadSelectedPartnerAction, loadUserAction } from '../../actions';
 import './Messenger.css'
-import { MessageList } from './MessageList/MessageList';
-
-const defaultChats = [
-    {
-        from:'user1',
-        to:'user2',
-        message:'Hi Bro',
-        date: new Date().toLocaleString()
-    },
-    {
-        from:'user2',
-        to:'user1',
-        message:'Hey',
-        date: new Date().toLocaleString()
-    },
-    {
-        from:'user2',
-        to:'user1',
-        message:'Whats up man',
-        date: new Date().toLocaleString()
-    },
-    {
-        from:'user1',
-        to:'user2',
-        message:'Im fine bro',
-        date: new Date().toLocaleString()
-    },
-    {
-        from:'user1',
-        to:'user3',
-        message:'Hello? Are you there?',
-        date: new Date().toLocaleString()
-    },
-    {
-        from:'user3',
-        to:'user1',
-        message:'Yes Whats happened??!!',
-        date: new Date().toLocaleString()
-    }
-]
+import { MessageList } from '../MessageList/MessageList';
+import { ConversationList } from '../ConversationList/ConversationList';
 
 export const Messenger = () => {
 
+    const connection = useSelector(state=>state.connection)
     const dispatch = useDispatch()
     const chats = useSelector(state=>state.chats)
     const user = useSelector(state=>state.user)
     const selectedPartner = useSelector(state=>state.selectedPartner)
-    const connection = useSelector(state=>state.connection)
+    const [onlineUsers, setOnlineUsers] = useState([])
+
+    // const  []
 
     useEffect(() => {
-        dispatch(loadUserAction('user1'))
-        dispatch(loadSelectedPartnerAction('user2'))
-
         let newConnection = new HubConnectionBuilder()
                                 .withUrl('http://localhost:54876/hubs/chat')
                                 .withAutomaticReconnect()
@@ -67,28 +29,49 @@ export const Messenger = () => {
     useEffect(async () => {
         try {
             await connection.start()
-            console.log('connected!')                
+            console.log('connected!')    
+            connection.send('ClientJoined', user)
+            
             connection.on('RecieveMessage', RecieveMessage)
+            connection.on('RecieveClients', RecieveClients)
+            connection.on('GetMessagesFromPartner', GetMessagesFromPartner)
         } catch (e) {
             console.log('Conenction fail: ', e)
-            
-            dispatch(loadChatsAction(defaultChats))
-            console.log(chats)
         }
     }, [connection])
 
+    useEffect(async () => {
+        try{
+            await connection.send('GetMessages', selectedPartner)
+        } catch (e) {
+            console.log(e);
+        }
+    }, [selectedPartner])
+
     const RecieveMessage = (data) => {
-        console.log(data)
+        if(data.from !== selectedPartner)
+        {
+            console.log('here: ', data)
+            return;
+        }
         dispatch(addChatAction(data))
+    }
+
+    const GetMessagesFromPartner = (data) => {
+        dispatch(loadChatsAction(data))
+    }
+
+    const RecieveClients = (clients) => {
+        setOnlineUsers([...clients])
     }
 
     return (
         <div className='messenger'>
-            <div className="scrollable sidebar">
-                {/* <ConversationList /> */}
+            <div className="sidebar">
+                <ConversationList users={onlineUsers}/>
             </div>
 
-            <div className="scrollable content">
+            <div className="content">
                 <MessageList />
             </div>
         </div>

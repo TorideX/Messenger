@@ -1,0 +1,11 @@
+.conversation-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.you{
+  position: absolute;
+  bottom: 10px;
+  margin-left: 10px;
+  color: #20bf6b;
+}
