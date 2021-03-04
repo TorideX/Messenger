@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MessengerAPI.Services.Abstract;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,15 +11,19 @@ namespace MessengerAPI.Controllers
     [Route("[controller]/[action]")]
     public class ChatController : Controller
     {
-        public ChatController()
-        {
+        private readonly IChatService chatService;
 
+        public ChatController(IChatService chatService)
+        {
+            this.chatService = chatService;
         }
 
         [HttpGet]
-        public IActionResult Test()
+        public IActionResult GetMessages([FromQuery]string userId)
         {
-            return Ok("Well done!");
+            if (string.IsNullOrWhiteSpace(userId)) return BadRequest();
+            var messages = chatService.GetChatMessages(userId);
+            return Ok(messages);
         }
     }
 }
